@@ -1,20 +1,36 @@
 import { useState, useRef, useEffect } from "react"
 
+const PERSONAS = [
+  { id: "assistant", name: "AI Assistant", emoji: "🤖" },
+  { id: "tutor", name: "Tutor", emoji: "👨‍🏫" },
+  { id: "code_reviewer", name: "Code Reviewer", emoji: "💻" },
+  { id: "career_coach", name: "Career Coach", emoji: "🚀" }
+]
+
 function App() {
   const [messages, setMessages] = useState([
     {
       role: "assistant",
-      content: "Hi! I'm your AI assistant powered by Llama 3. How can I help you today?"
+      content: "Hi! I'm your AI assistant powered by Llama 3. Select a persona above and start chatting!"
     }
   ])
   const [input, setInput] = useState("")
   const [loading, setLoading] = useState(false)
+  const [persona, setPersona] = useState("assistant")
   const bottomRef = useRef(null)
 
-  // Auto scroll to bottom
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages])
+
+  const handlePersonaChange = (newPersona) => {
+    setPersona(newPersona)
+    const selected = PERSONAS.find(p => p.id === newPersona)
+    setMessages([{
+      role: "assistant",
+      content: `Switched to ${selected.emoji} ${selected.name} mode! How can I help you?`
+    }])
+  }
 
   const sendMessage = async () => {
     if (!input.trim()) return
@@ -31,7 +47,8 @@ function App() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           message: input,
-          history: messages
+          history: messages,
+          persona: persona
         })
       })
 
@@ -57,15 +74,38 @@ function App() {
     }
   }
 
+  const activePersona = PERSONAS.find(p => p.id === persona)
+
   return (
     <div className="min-h-screen bg-gray-950 flex items-center justify-center p-4">
       <div className="w-full max-w-2xl flex flex-col h-[90vh] bg-gray-900 rounded-2xl shadow-2xl overflow-hidden">
 
         {/* Header */}
-        <div className="bg-gray-800 px-6 py-4 flex items-center gap-3 border-b border-gray-700">
-          <div className="w-3 h-3 rounded-full bg-green-400 animate-pulse"></div>
-          <h1 className="text-white font-semibold text-lg">AI Assistant</h1>
-          <span className="text-gray-400 text-sm ml-auto">Powered by Llama 3</span>
+        <div className="bg-gray-800 px-6 py-4 border-b border-gray-700">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-3 h-3 rounded-full bg-green-400 animate-pulse"></div>
+            <h1 className="text-white font-semibold text-lg">
+              {activePersona.emoji} {activePersona.name}
+            </h1>
+            <span className="text-gray-400 text-sm ml-auto">Powered by Llama 3</span>
+          </div>
+
+          {/* Persona Selector */}
+          <div className="flex gap-2 flex-wrap">
+            {PERSONAS.map(p => (
+              <button
+                key={p.id}
+                onClick={() => handlePersonaChange(p.id)}
+                className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                  persona === p.id
+                    ? "bg-blue-600 text-white"
+                    : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                }`}
+              >
+                {p.emoji} {p.name}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Messages */}
@@ -87,7 +127,6 @@ function App() {
             </div>
           ))}
 
-          {/* Loading indicator */}
           {loading && (
             <div className="flex justify-start">
               <div className="bg-gray-700 px-4 py-3 rounded-2xl rounded-bl-sm">
@@ -106,7 +145,7 @@ function App() {
         <div className="px-6 py-4 bg-gray-800 border-t border-gray-700 flex gap-3">
           <textarea
             className="flex-1 bg-gray-700 text-white placeholder-gray-400 rounded-xl px-4 py-3 text-sm resize-none outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Type a message... (Enter to send)"
+            placeholder={`Message ${activePersona.name}... (Enter to send)`}
             rows={1}
             value={input}
             onChange={e => setInput(e.target.value)}
