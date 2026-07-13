@@ -1,31 +1,53 @@
-import { useState } from "react"
+import { useState, useRef, useEffect } from "react"
 
 function App() {
   const [messages, setMessages] = useState([
     {
       role: "assistant",
-      content: "Hi! I'm your AI assistant. How can I help you today?"
+      content: "Hi! I'm your AI assistant powered by Llama 3. How can I help you today?"
     }
   ])
   const [input, setInput] = useState("")
   const [loading, setLoading] = useState(false)
+  const bottomRef = useRef(null)
+
+  // Auto scroll to bottom
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" })
+  }, [messages])
 
   const sendMessage = async () => {
     if (!input.trim()) return
 
     const userMessage = { role: "user", content: input }
-    setMessages(prev => [...prev, userMessage])
+    const updatedMessages = [...messages, userMessage]
+    setMessages(updatedMessages)
     setInput("")
     setLoading(true)
 
-    // Simulate AI response for now (backend comes Day 9)
-    setTimeout(() => {
+    try {
+      const response = await fetch("http://localhost:8000/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: input,
+          history: messages
+        })
+      })
+
+      const data = await response.json()
       setMessages(prev => [...prev, {
         role: "assistant",
-        content: "I'm a demo response. Backend will be connected on Day 9!"
+        content: data.reply
       }])
+    } catch (error) {
+      setMessages(prev => [...prev, {
+        role: "assistant",
+        content: "Sorry, I couldn't connect to the backend. Make sure it's running!"
+      }])
+    } finally {
       setLoading(false)
-    }, 1000)
+    }
   }
 
   const handleKeyDown = (e) => {
@@ -38,7 +60,7 @@ function App() {
   return (
     <div className="min-h-screen bg-gray-950 flex items-center justify-center p-4">
       <div className="w-full max-w-2xl flex flex-col h-[90vh] bg-gray-900 rounded-2xl shadow-2xl overflow-hidden">
-        
+
         {/* Header */}
         <div className="bg-gray-800 px-6 py-4 flex items-center gap-3 border-b border-gray-700">
           <div className="w-3 h-3 rounded-full bg-green-400 animate-pulse"></div>
@@ -77,6 +99,7 @@ function App() {
               </div>
             </div>
           )}
+          <div ref={bottomRef} />
         </div>
 
         {/* Input */}
